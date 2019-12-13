@@ -53,12 +53,40 @@ $f3->route('GET|POST /login', function($f3)
 });
 
 //forgot password
-$f3->route('GET /forgot-password', function($f3)
+$f3->route('GET|POST /forgot-password', function($f3)
 {
+    global $db;
     $f3->set('page_title', 'Forgot Password');
+
+    if (!empty($_POST))
+    {
+        Emailer::sendResetEmail($_POST['email'], $db);
+    }
 
     $view = new Template();
     echo $view->render('views/portal/account/forgot-password.html');
+});
+
+//reset password
+$f3->route('GET|POST /reset-password/@adminId/@hashcode', function($f3, $params)
+{
+    $f3->set('page_title', 'Reset Password');
+
+    global $db;
+    $hashedId = str_replace('-', '/', $params['hashcode']);
+    if(!password_verify($params['adminId'], $hashedId))
+    {
+        $f3->reroute('/login');
+    }
+
+    if (!empty($_POST))
+    {
+        $db->changeAdminPassword($params['adminId'], $_POST['password']);
+        $f3->reroute('/login');
+    }
+
+    $view = new Template();
+    echo $view->render('views/portal/account/reset-password.html');
 });
 
 //create account
@@ -121,6 +149,16 @@ $f3->route('GET|POST /dashboard', function($f3)
     $numTrainings = $db->countTrainings();
     $numDate = $db->countDate();
     $numApplicationByMonthYear = $db->countApplicationByMonthYear();
+    $first = $db->getTheFirstSlacker();
+    $second = $db->getTheSecondSlacker();
+    $third = $db->getTheThirdSlacker();
+    $fourth = $db->getTheFourthSlacker();
+    $fifth = $db->getTheFifthSlacker();
+    $firstPercentage = $db->getTheFirstPercentage();
+    $secondPercentage = $db->getTheSecondPercentage();
+    $thirdPercentage = $db->getTheThirdPercentage();
+    $fourthPercentage = $db->getTheFourthPercentage();
+    $fifthPercentage = $db->getTheFifthPercentage();
 
     $f3->set('numActive', $numActive);
     $f3->set('numComplete', $numComplete);
@@ -132,6 +170,16 @@ $f3->route('GET|POST /dashboard', function($f3)
     $f3->set('numTrainings', $numTrainings);
     $f3->set('numDate',$numDate);
     $f3->set('numApplicationByMonthYear',$numApplicationByMonthYear);
+    $f3->set('first',$first);
+    $f3->set('second',$second);
+    $f3->set('third',$third);
+    $f3->set('fourth',$fourth);
+    $f3->set('fifth',$fifth);
+    $f3->set('firstPercentage',$firstPercentage);
+    $f3->set('secondPercentage',$secondPercentage);
+    $f3->set('thirdPercentage',$thirdPercentage);
+    $f3->set('fourthPercentage',$fourthPercentage);
+    $f3->set('fifthPercentage',$fifthPercentage);
 
     $labelDataForGraph = array();
     $barDataForGraph = array();
@@ -197,6 +245,16 @@ $f3->route('GET|POST /active', function($f3)
         //run update query
         $db->updateApplicant($id, $category, $status, $notes);
         $f3->reroute('/active');
+    }
+
+    if(isset($_POST['resendEmail']))
+    {
+        $id = $_POST['id'];
+        $db->updateApplicantStatus(1, $id);
+        $personal = $db->getInfoForEmailResend($id);
+        Emailer::sendAffiliateEmail($id, $personal['fname'], $personal['lname'], $personal['affiliate'], $db);
+        $f3->set('emailSent', true);
+        $f3->set('affiliateName', $db->getAffiliateName($personal['affiliate']));
     }
 
     $view = new Template();
@@ -359,6 +417,19 @@ $f3->route('GET /@applicant', function($f3, $params)
     $applicant_id = $params['applicant']; //must match^
     $applicant = $db->getApplicant($applicant_id);
 
+    //get app type
+    $app_type = $applicant['app_type'];
+
+    //pull data based on app type and id
+    $longAnswers = $db->getLongAnswer($applicant_id, $app_type);
+    $routing = $applicant['Reference'];
+
+    //set to hive
+    $f3->set('longAnswers', $longAnswers);
+
+    $f3->set('applicant', $applicant);
+    $f3->set('reviewIncludes', "views/portal/applications/long_answers/$routing/long_answer.html");
+
     if($applicant['category'] == 1) {
         $f3->set('page', 'active');
     }
@@ -368,8 +439,6 @@ $f3->route('GET /@applicant', function($f3, $params)
     else if($applicant['category'] == 2) {
         $f3->set('page', 'waitlist');
     }
-
-    $f3->set('applicant', $applicant);
 
     $view = new Template();
     echo $view->render('views/portal/applications/applicant.html');

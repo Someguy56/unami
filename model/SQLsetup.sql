@@ -26,7 +26,7 @@ CREATE TABLE applicants
     pronouns VARCHAR(50) NOT NULL,
     birthdate VARCHAR(10) NOT NULL,
     NAMI_member boolean NOT NULL,
-    affiliate VARCHAR(50) NOT NULL,
+    affiliate INT NOT NULL,
     address VARCHAR(70) NOT NULL,
     city VARCHAR(70) NOT NULL,
     address2 VARCHAR(70),
@@ -40,16 +40,16 @@ CREATE TABLE applicants
     preference VARCHAR(5) NOT NULL,
     emergency_name VARCHAR(120),
     emergency_phone VARCHAR(15),
-    special_needs boolean NOT NULL,
-    service_animal boolean NOT NULL,
-    mobility_need boolean NOT NULL,
-    need_rooming boolean NOT NULL,
-    single_room boolean DEFAULT false,
+    special_needs MEDIUMTEXT NOT NULL,
+    service_animal MEDIUMTEXT NOT NULL,
+    mobility_need MEDIUMTEXT NOT NULL,
+    need_rooming VARCHAR(50) NOT NULL,
+    single_room VARCHAR(50) NOT NULL DEFAULT 'N/A',
     days_rooming VARCHAR(200) DEFAULT 'N/A',
     gender VARCHAR(50) DEFAULT 'N/A',
     roommate_gender VARCHAR(50) DEFAULT 'N/A',
-    cpap_user boolean DEFAULT false,
-    roommate_cpap boolean DEFAULT false,
+    cpap_user VARCHAR(10) DEFAULT false,
+    roommate_cpap VARCHAR(10) DEFAULT false,
     heard_about_training MEDIUMTEXT,
     other_classes MEDIUMTEXT,
     certified MEDIUMTEXT,
@@ -134,7 +134,6 @@ CREATE TABLE affiliates
 (
     affiliate_id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
-    phone VARCHAR(30) NOT NULL,
     email VARCHAR(254) NOT NULL
 );
 
@@ -149,27 +148,27 @@ CREATE TABLE adminUser
 );
 
 /* setup basic data for tables */
-INSERT INTO affiliates(name)
+INSERT INTO affiliates(name, email)
 VALUES
-('NAMI Chelan-Douglas'),
-('NAMI Clallam County'),
-('NAMI Eastside'),
-('NAMI Jefferson County'),
-('NAMI Kitsap County'),
-('NAMI Lewis County'),
-('NAMI Pierce County'),
-('NAMI Seattle'),
-('NAMI Skagit'),
-('NAMI Snohomish County'),
-('NAMI South King County'),
-('NAMI Southwest Washington'),
-('NAMI Spokane'),
-('NAMI Thurston-Mason'),
-('NAMI Tri-Cities'),
-('NAMI Walla Walla'),
-('NAMI Washington Coast'),
-('NAMI Whatcom'),
-('NAMI Yakima');
+('NAMI Chelan-Douglas', 'chelandouglasnami@gmail.com'),
+('NAMI Clallam County', 'namiofclallamcounty@gmail.com'),
+('NAMI Eastside', 'info@nami-eastside.org'),
+('NAMI Jefferson County', 'namijeffco@yahoo.com'),
+('NAMI Kitsap County', 'info@namikitsap.org'),
+('NAMI Lewis County', 'namilewiscountywa@gmail.com'),
+('NAMI Pierce County', 'info@namipierce.org'),
+('NAMI Seattle', 'info@namiseattle.org'),
+('NAMI Skagit', 'namiskagitpresident@gmail.com'),
+('NAMI Snohomish County', 'nami.snohomish.county@gmail.com'),
+('NAMI South King County', 'namiskc@qwestoffice.net'),
+('NAMI Southwest Washington', 'info@namiswwa.org'),
+('NAMI Spokane', 'programs@namispokane.org'),
+('NAMI Thurston-Mason', 'info@namitm.org'),
+('NAMI Tri-Cities', 'namitricities@gmail.com'),
+('NAMI Walla Walla', 'namiwallaalla@gmail.com'),
+('NAMI Washington Coast', 'president@nami-wacoast.org'),
+('NAMI Whatcom', 'namiadmin@namiwhatcom.org'),
+('NAMI Yakima', 'info@namiyakima.org');
 
 INSERT INTO app_type(app_type, ref_name)
 VALUES

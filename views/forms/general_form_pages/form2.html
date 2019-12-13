@@ -41,39 +41,69 @@
                 <form method="post" action="additional_information" class="m-0">
 
                     <div class="mb-4">
-                        <div class="form-row mb-3">
+                        <div class="form-row mb-1">
                             <div class="form-group col-md-12">
                                 <h5 class="mb-3">Do you have any accessibility needs, dietary restrictions
                                     or other issues which need accommodation during training? </h5>
 
-                                <label class="mr-3 ml-3"><input type="radio" name="specialNeeds" value="true" required
+                                <label class="mr-3 ml-3"><input type="radio" name="specialNeeds" value="true"
+                                                                id="specialNeedsYes" required
                                     <check if="{{ $_SESSION['AdditionalInfo']->getSpecialNeeds() == 'true' }}">checked</check>>
                                     Yes</label>
-                                <label><input type="radio" name="specialNeeds" value="false" required
+                                <label><input type="radio" name="specialNeeds" value="false" id="specialNeedsNo" required
                                     <check if="{{ $_SESSION['AdditionalInfo']->getSpecialNeeds() == 'false' }}">checked</check>>
                                     No</label>
+                            </div>
+                        </div>
+
+                        <div class="form-row ml-2 mb-3" id="specialNeedsText" style="display: none">
+                            <div class="col-md-7">
+                                <label for="specialNeedsTextBox">If yes, please describe your special needs: </label>
+                                <textarea name="specialNeedsText" class="form-control" id="specialNeedsTextBox" rows="5"
+                                >{{ $_SESSION['AdditionalInfo']->getSpecialNeedsText() }}</textarea>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group col-md-6">
                                 <h5 class="mb-3">Will you be bringing a service animal?</h5>
-                                <label class="mr-3 ml-3"><input type="radio" name="serviceAnimal" value="true" required
-                                    <check if="{{ $_SESSION['AdditionalInfo']->getServiceAnimal() == 'true' }}">checked</check>>
-                                    Yes</label>
-                                <label><input type="radio" name="serviceAnimal" value="false" required
-                                    <check if="{{ $_SESSION['AdditionalInfo']->getServiceAnimal() == 'false' }}">checked</check>>
-                                    No</label>
+                                <div>
+                                    <label class="mr-3 ml-3"><input type="radio" name="serviceAnimal" value="true"
+                                                                    id="serviceAnimalYes" required
+                                        <check if="{{ $_SESSION['AdditionalInfo']->getServiceAnimal() == 'true' }}">checked</check>>
+                                        Yes</label>
+
+                                    <label><input type="radio" name="serviceAnimal" value="false" id="serviceAnimalNo" required
+                                        <check if="{{ $_SESSION['AdditionalInfo']->getServiceAnimal() == 'false' }}">checked</check>>
+                                        No</label>
+                                </div>
+
+                                <div style="display: none" id="serviceAnimalText">
+                                    <label for="serviceAnimalTextBox">If yes, please detail your service animal: </label>
+                                    <textarea name="serviceAnimalText" class="form-control" id="serviceAnimalTextBox" rows="5"
+                                    >{{ $_SESSION['AdditionalInfo']->getServiceAnimalText() }}</textarea>
+                                </div>
                             </div>
 
                             <div class="form-group col-md-6">
-                                <h5 class="mb-3">Do you use a walker or wheelchair?</h5>
-                                <label class="mr-3 ml-3"><input type="radio" name="movementDisability" value="true" required
-                                    <check if="{{ $_SESSION['AdditionalInfo']->getMovementDisability() == 'true' }}">
-                                        checked</check>> Yes</label>
-                                <label><input type="radio" name="movementDisability" value="false" required
-                                    <check if="{{ $_SESSION['AdditionalInfo']->getMovementDisability() == 'false' }}">
-                                        checked</check>> No</label>
+                                <div>
+                                    <h5 class="mb-3">Do you use a walker or wheelchair?</h5>
+                                    <label class="mr-3 ml-3"><input type="radio" name="movementDisability" value="true"
+                                                                    id="movementDisabilityYes" required
+                                        <check if="{{ $_SESSION['AdditionalInfo']->getMovementDisability() == 'true' }}">
+                                            checked</check>> Yes</label>
+
+                                    <label><input type="radio" name="movementDisability" value="false"
+                                                  id="movementDisabilityNo" required
+                                        <check if="{{ $_SESSION['AdditionalInfo']->getMovementDisability() == 'false' }}">
+                                            checked</check>> No</label>
+                                </div>
+
+                                <div style="display: none" id="movementDisabilityText">
+                                    <label for="movementDisabilityTextBox">If yes, please detail your mobility helper: </label>
+                                    <textarea name="movementDisabilityText" class="form-control" id="movementDisabilityTextBox" rows="5"
+                                    >{{ $_SESSION['AdditionalInfo']->getMovementDisabilityText() }}</textarea>
+                                </div>
                             </div>
                         </div>
 
@@ -81,7 +111,7 @@
 
                         <div class="row mt-3">
                             <div class="col-md-12">
-                                <h5 class="mb-4">IOOV training begins Saturday morning. Those who are further than 1 hour
+                                <h5 class="mb-4">Training begins Saturday morning. Those who are further than 1 hour
                                     away are provided lodging and will want to consider arriving Friday evening
                                     (don't forget I-5 traffic snarl!). Please complete the following information:</h5>
                             </div>
@@ -100,23 +130,23 @@
                             </div>
                         </div>
 
-                        <div class="form-row my-3" id="singleRoom" style="display: none">
-                            <div class="col-md-12">
-                                <h5 class="mb-4">I would like a single room and understand I, the attendee, will be responsible for the
-                                    additional amount and I will be billed by NAMI Washington 3 weeks after the training is
-                                    complete.</h5>
-                                <label class="mr-3 ml-3"><input type="radio" name="singleRoom" value="true" id="hide2"
-                                    <check if="{{$_SESSION['AdditionalInfo']->getSingleRoom() === 'true'}}">
-                                        checked</check> <check if="{{$_SESSION['AdditionalInfo']->getNeedAccommodations() == 'true'}}">
-                                        required</check>> Yes, I want to pay for a single room</label>
-                                <label class="mr-3"><input type="radio" name="singleRoom" value="false" id="show2"
-                                    <check if="{{$_SESSION['AdditionalInfo']->getSingleRoom() === 'false'}}">
-                                        checked</check> <check if="{{$_SESSION['AdditionalInfo']->getNeedAccommodations() == 'true'}}">
-                                        required</check>> No, I want to room with someone</label>
+                        <div id="singleRoom" style="display: none">
+                            <div class="form-row my-3" >
+                                <div class="col-md-12">
+                                    <h5 class="mb-4">I would like a single room and understand I, the attendee, will be responsible for the
+                                        additional amount and I will be billed by NAMI Washington 3 weeks after the training is
+                                        complete.</h5>
+                                    <label class="mr-3 ml-3"><input type="radio" name="singleRoom" value="true" id="hide2"
+                                        <check if="{{$_SESSION['AdditionalInfo']->getSingleRoom() === 'true'}}">
+                                            checked</check> <check if="{{$_SESSION['AdditionalInfo']->getNeedAccommodations() == 'true'}}">
+                                            required</check>> Yes, I want to pay for a single room</label>
+                                    <label class="mr-3"><input type="radio" name="singleRoom" value="false" id="show2"
+                                        <check if="{{$_SESSION['AdditionalInfo']->getSingleRoom() === 'false'}}">
+                                            checked</check> <check if="{{$_SESSION['AdditionalInfo']->getNeedAccommodations() == 'true'}}">
+                                            required</check>> No, I want to room with someone</label>
+                                </div>
                             </div>
-                        </div>
 
-                        <div id="daysRooming" style="display: none">
                             <div class="form-row my-3 mt-4">
                                 <div class="form-group col-md-12">
                                     <h5 class="mb-3">I will need housing for the following nights:</h5>
@@ -128,7 +158,9 @@
                                             checked</check>> Saturday</label>
                                 </div>
                             </div>
+                        </div>
 
+                        <div id="daysRooming" style="display: none">
                             <div class="row">
                                 <div class="col-md-12">
                                     <h5 class="mb-3">NAMI-WA will try to accommodate roommate requests: </h5>

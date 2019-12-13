@@ -98,11 +98,11 @@ class UnamiDatabase
         $emergency_phone = $personalInfo->getEmergencyPhone();
 
         //accommodations
-        $special_needs = ($accommodations->getSpecialNeeds() == 'true' ? true : false);
-        $service_animal = ($accommodations->getServiceAnimal() == 'true' ? true : false);
-        $mobility_need = ($accommodations->getMovementDisability() == 'true' ? true : false);
-        $need_rooming = ($accommodations->getNeedAccommodations() == 'true' ? true : false);
-        $single_room = ($accommodations->getSingleRoom() == 'true' ? true : false);
+        $special_needs = ($accommodations->getSpecialNeedsText());
+        $service_animal = ($accommodations->getServiceAnimalText());
+        $mobility_need = ($accommodations->getMovementDisabilityText());
+        $need_rooming = ($accommodations->getNeedAccommodations() == 'true' ? "Yes" : "No");
+        $single_room = ($accommodations->getSingleRoom() == 'true' ? "Yes" : "No");
 
         $daysAsString = '';
         if(is_array($accommodations->getDaysRooming()))
@@ -120,8 +120,8 @@ class UnamiDatabase
         $days_rooming = $daysAsString;
         $gender = $accommodations->getGender();
         $roommate_gender = $accommodations->getRoommateGender();
-        $cpap_user = ($accommodations->getCpap() == 'true' ? true : false);
-        $roommateCpap = ($accommodations->getCpapRoommate() == 'true' ? true : false);
+        $cpap_user = ($accommodations->getCpap() == 'true' ? "Yes" : "No");
+        $roommateCpap = ($accommodations->getCpapRoommate() == 'true' ? "Yes" : "No");
 
         //not required
         $heard_about_training = $notRequired->getHeardAboutTraining();
@@ -161,16 +161,16 @@ class UnamiDatabase
         $statement->bindParam(':emergency_phone', $emergency_phone, PDO::PARAM_STR);
 
         //accommodations
-        $statement->bindParam(':special_needs', $special_needs, PDO::PARAM_BOOL);
-        $statement->bindParam(':service_animal', $service_animal, PDO::PARAM_BOOL);
-        $statement->bindParam(':mobility_need', $mobility_need, PDO::PARAM_BOOL);
-        $statement->bindParam(':need_rooming', $need_rooming, PDO::PARAM_BOOL);
-        $statement->bindParam(':single_room', $single_room, PDO::PARAM_BOOL);
+        $statement->bindParam(':special_needs', $special_needs, PDO::PARAM_STR);
+        $statement->bindParam(':service_animal', $service_animal, PDO::PARAM_STR);
+        $statement->bindParam(':mobility_need', $mobility_need, PDO::PARAM_STR);
+        $statement->bindParam(':need_rooming', $need_rooming, PDO::PARAM_STR);
+        $statement->bindParam(':single_room', $single_room, PDO::PARAM_STR);
         $statement->bindParam(':days_rooming', $days_rooming, PDO::PARAM_STR);
         $statement->bindParam(':gender', $gender, PDO::PARAM_STR);
         $statement->bindParam(':roommate_gender', $roommate_gender, PDO::PARAM_STR);
-        $statement->bindParam(':cpap_user', $cpap_user, PDO::PARAM_BOOL);
-        $statement->bindParam(':roommate_cpap', $roommateCpap, PDO::PARAM_BOOL);
+        $statement->bindParam(':cpap_user', $cpap_user, PDO::PARAM_STR);
+        $statement->bindParam(':roommate_cpap', $roommateCpap, PDO::PARAM_STR);
 
         //not required
         $statement->bindParam(':heard_about_training', $heard_about_training, PDO::PARAM_STR);
@@ -184,6 +184,21 @@ class UnamiDatabase
         $statement->execute();
 
         return $this->_dbh->lastInsertId();
+    }
+
+    /**
+     * @param $id int applicant's id
+     * @return mixed Info needed to resend email to affiliate
+     */
+    function getInfoForEmailResend($id)
+    {
+        $sql = "SELECT fname, lname, affiliate FROM applicants WHERE applicant_id = :app_id";
+
+        $statement = $this->_dbh->prepare($sql);
+        $statement->bindParam(':app_id', $id, PDO::PARAM_INT);
+
+        $statement->execute();
+        return $statement->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -486,7 +501,7 @@ class UnamiDatabase
     function getAffiliates()
     {
         //define query
-        $query = "SELECT name, affiliate_id, phone, email FROM affiliates";
+        $query = "SELECT name, affiliate_id, email FROM affiliates";
 
         //prepare statement
         $statement = $this->_dbh->prepare($query);
@@ -727,6 +742,7 @@ class UnamiDatabase
                   app_status AS AppStatus, 
                   CONCAT(fname, ' ', lname) AS Name, 
                   affiliates.name AS Affiliate, 
+                  affiliates.affiliate_id AS AffiliateID,
                   app_type.app_type AS Training, 
                   applicants.email AS Email, 
                   date_submitted AS DateSubmitted,
@@ -875,8 +891,9 @@ class UnamiDatabase
     function countDate() {
         //define query
         //$query = "SELECT COUNT(date_submitted) As Submitted, EXTRACT(YEAR_MONTH FROM date_submitted) AS MonthYear FROM applicants;";
-        $query = "SELECT EXTRACT(YEAR_MONTH FROM date_submitted) AS MonthYear 
-                  FROM applicants GROUP BY MonthYear ORDER BY MonthYear";
+        $query = "SELECT concat(month(date_submitted),'/', year(date_submitted)) as MonthYear FROM applicants 
+                    GROUP BY MonthYear
+                    ORDER BY date_submitted";
 
         //prepare statement
         $statement = $this->_dbh->prepare($query);
@@ -955,6 +972,7 @@ class UnamiDatabase
         $query = "SELECT *,
                   affiliates.name AS Affiliate,
                   app_type.app_type AS Training,
+                  app_type.ref_name AS Reference,
                   applicants.email AS Email,
                   app_type_info.date AS Day1,
                   app_type_info.date2 AS Day2,
@@ -991,29 +1009,48 @@ class UnamiDatabase
     {
         //name, phone, email, special needs, and all rooming info
         //define query
-        $query="SELECT fname, lname, primary_phone, email, 
+        $query="SELECT date_submitted, app_status, fname, lname, primary_phone, email, 
                 special_needs, service_animal, mobility_need, need_rooming,
                 single_room, days_rooming, gender, roommate_gender, 
                 cpap_user, roommate_cpap
                 FROM applicants
-                WHERE app_type = :app_type
-                AND app_status = :app_status";
+                WHERE app_type = :app_type";
 
         //prepare statement
         $statement = $this->_dbh->prepare($query);
 
         //only get complete applications
-        $app_status = 3;
+        //$app_status = 3;
 
         //bind parameter
         $statement->bindParam(':app_type', $applicationId, PDO::PARAM_INT);
-        $statement->bindParam(':app_status', $app_status, PDO::PARAM_INT);
+        //$statement->bindParam(':app_status', $app_status, PDO::PARAM_INT);
 
         //execute
         $statement->execute();
 
         //get result
         $result = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        for($i = 0; $i < sizeof($result); $i++)
+        {
+            if($result[$i]['app_status'] == 0)
+            {
+                $result[$i]['app_status'] = "denied";
+            }
+            else if($result[$i]['app_status'] == 1)
+            {
+                $result[$i]['app_status'] = "submitted";
+            }
+            else if($result[$i]['app_status'] == 2)
+            {
+                $result[$i]['app_status'] = "approved";
+            }
+            else if($result[$i]['app_status'] == 3)
+            {
+                $result[$i]['app_status'] = "completed";
+            }
+        }
 
         return $result;
     }
@@ -1078,6 +1115,277 @@ class UnamiDatabase
         $result = $statement->fetch(PDO::FETCH_ASSOC);
 
         return $result;
+    }
+
+    /**
+     * @return Name/percentage of the top five affiliates with the most pending applications
+     */
+    ////////////the first///////////
+
+    //name//
+    function getTheFirstSlacker() {
+        //define query
+        $query =   "SELECT affiliates.name as affiliateName1 from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP by affiliate
+                    ORDER by COUNT(category) DESC
+                    LIMIT 1";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    //percentage//
+    function getTheFirstPercentage(){
+        $query =   "SELECT
+                    ROUND((((SELECT COUNT(app_type) from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 1)/
+                    (SELECT COUNT(app_type) as firstPercentage from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 1))*100),0)
+                    as firstPercentage";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+
+    ////////////the second////////////
+
+    //name//
+    function getTheSecondSlacker() {
+        //define query
+        $query =   "SELECT affiliates.name as affiliateName2 from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP by affiliate
+                    ORDER by COUNT(category) DESC
+                    LIMIT 1,1";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    //percentage//
+    function getTheSecondPercentage(){
+        $query =   "SELECT
+                    ROUND((((SELECT COUNT(app_type) from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 1,1)/
+                    (SELECT COUNT(app_type) as firstPercentage from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 1,1))*100),0)
+                    as secondPercentage";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+
+    ////////////the third////////////
+
+    //name//
+    function getTheThirdSlacker() {
+        //define query
+        $query =   "SELECT affiliates.name as affiliateName3 from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP by affiliate
+                    ORDER by COUNT(category) DESC
+                    LIMIT 2,1";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    //percentage//
+    function getTheThirdPercentage(){
+        $query =   "SELECT
+                    ROUND((((SELECT COUNT(app_type) from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 2,1)/
+                    (SELECT COUNT(app_type) as firstPercentage from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 2,1))*100),0)
+                    as thirdPercentage";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    ////////////the fourth////////////
+
+    //name//
+    function getTheFourthSlacker() {
+        //define query
+        $query =   "SELECT affiliates.name as affiliateName4 from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP by affiliate
+                    ORDER by COUNT(category) DESC
+                    LIMIT 3,1";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    //percentage//
+    function getTheFourthPercentage(){
+        $query =   "SELECT
+                    ROUND((((SELECT COUNT(app_type) from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 3,1)/
+                    (SELECT COUNT(app_type) as firstPercentage from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 3,1))*100),0)
+                    as fourthPercentage";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    ////////////the fifth////////////
+
+    //name//
+    function getTheFifthSlacker() {
+        //define query
+        $query =   "SELECT affiliates.name as affiliateName5 from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP by affiliate
+                    ORDER by COUNT(category) DESC
+                    LIMIT 4,1";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    //percentage//
+    function getTheFifthPercentage(){
+        $query =   "SELECT
+                    ROUND((((SELECT COUNT(app_type) from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    WHERE app_type = 1
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 4,1)/
+                    (SELECT COUNT(app_type) as firstPercentage from applicants
+                    INNER JOIN  affiliates ON affiliates.affiliate_id = applicants.affiliate
+                    GROUP BY affiliate
+                    ORDER BY COUNT(app_type) DESC
+                    LIMIT 4,1))*100),0)
+                    as fifthPercentage";
+
+        //prepare statement
+        $statement = $this->_dbh->prepare($query);
+
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result;
+    }
+
+    function getAdminInfo($email)
+    {
+        $sql = "SELECT * FROM adminUser WHERE email = :email";
+
+        $statement = $this->_dbh->prepare($sql);
+
+        $statement->bindParam(':email', $email, PDO::PARAM_STR);
+
+        $statement->execute();
+
+        return $statement->fetch(PDO::FETCH_ASSOC);
+    }
+
+    function changeAdminPassword($adminId, $password)
+    {
+        $password = password_hash($password, PASSWORD_DEFAULT);
+        $sql = "UPDATE adminUser SET password = :password WHERE admin_id = :admin_id";
+
+        $statement = $this->_dbh->prepare($sql);
+
+        $statement->bindParam(':password', $password, PDO::PARAM_STR);
+        $statement->bindParam(':admin_id', $adminId, PDO::PARAM_INT);
+
+        $statement->execute();
     }
 
 }
